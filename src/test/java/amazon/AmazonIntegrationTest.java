@@ -14,12 +14,15 @@ class AmazonIntegrationTest {
         conn = DriverManager.getConnection(
                 "jdbc:hsqldb:mem:amazon", "sa", ""
         );
+
         try (Statement st = conn.createStatement()) {
 
-            // Drop table if it already exists
-            st.execute("DROP TABLE IF EXISTS orders");
+            // Force-drop even if already created
+            try {
+                st.execute("DROP TABLE orders");
+            } catch (Exception ignored) { }
 
-            // Create table with CHECK constraint to prevent negative totals
+            // ✅ Create new table with CHECK constraint
             st.execute(
                     "CREATE TABLE orders (" +
                             "id INT IDENTITY, " +
