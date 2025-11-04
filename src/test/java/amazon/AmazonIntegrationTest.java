@@ -14,16 +14,25 @@ class AmazonIntegrationTest {
         conn = DriverManager.getConnection(
                 "jdbc:hsqldb:mem:amazon", "sa", ""
         );
-        try(Statement st = conn.createStatement()){
+        try (Statement st = conn.createStatement()) {
+
+            // Drop table if it already exists
+            st.execute("DROP TABLE IF EXISTS orders");
+
+            // Create table with CHECK constraint to prevent negative totals
             st.execute(
-                    "CREATE TABLE IF NOT EXISTS orders(id INT IDENTITY, userId VARCHAR(50), total DOUBLE)"
+                    "CREATE TABLE orders (" +
+                            "id INT IDENTITY, " +
+                            "userId VARCHAR(50), " +
+                            "total DOUBLE, " +
+                            "CONSTRAINT non_negative CHECK (total >= 0))"
             );
         }
     }
 
     @BeforeEach
     void reset() throws Exception {
-        try(Statement st = conn.createStatement()){
+        try (Statement st = conn.createStatement()) {
             st.execute("DELETE FROM orders");
         }
     }
@@ -36,12 +45,14 @@ class AmazonIntegrationTest {
     @Test
     @DisplayName("specification-based")
     void saveOrder() throws Exception {
-        try(PreparedStatement ps = conn.prepareStatement(
+        try (PreparedStatement ps = conn.prepareStatement(
                 "INSERT INTO orders(userId,total) VALUES('u1',20)"
-        )){ ps.executeUpdate(); }
+        )) {
+            ps.executeUpdate();
+        }
 
-        try(Statement st = conn.createStatement();
-            ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM orders")){
+        try (Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM orders")) {
             rs.next();
             int count = rs.getInt(1);
             assertThat(count).isEqualTo(1);
@@ -52,9 +63,11 @@ class AmazonIntegrationTest {
     @DisplayName("structural-based")
     void noNegative() {
         assertThatThrownBy(() -> {
-            try(PreparedStatement ps = conn.prepareStatement(
+            try (PreparedStatement ps = conn.prepareStatement(
                     "INSERT INTO orders(userId,total) VALUES('u1',-1)"
-            )){ ps.executeUpdate(); }
+            )) {
+                ps.executeUpdate();
+            }
         }).isInstanceOf(Exception.class);
     }
 }
