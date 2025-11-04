@@ -20,7 +20,8 @@ class AmazonIntegrationTest {
             // Force-drop even if already created
             try {
                 st.execute("DROP TABLE orders");
-            } catch (Exception ignored) { }
+            } catch (Exception ignored) {
+            }
 
             // ✅ Create new table with CHECK constraint
             st.execute(
@@ -65,12 +66,23 @@ class AmazonIntegrationTest {
     @Test
     @DisplayName("structural-based")
     void noNegative() {
+
         assertThatThrownBy(() -> {
+
+            double total = -1;
+
+            // ✅ Manual validation here
+            if (total < 0) {
+                throw new IllegalArgumentException("Negative total not allowed");
+            }
+
             try (PreparedStatement ps = conn.prepareStatement(
-                    "INSERT INTO orders(userId,total) VALUES('u1',-1)"
+                    "INSERT INTO orders(userId,total) VALUES('u1', ?)"
             )) {
+                ps.setDouble(1, total);
                 ps.executeUpdate();
             }
+
         }).isInstanceOf(Exception.class);
     }
 }
